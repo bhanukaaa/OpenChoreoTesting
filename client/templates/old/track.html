@@ -1,0 +1,121 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h3>Track Your Package</h3>
+            <div class="input-group mb-4 mt-3">
+                <input type="text" id="trackInput" class="form-control" placeholder="Enter Order ID (e.g. 550e8400...)">
+                <button class="btn btn-primary" onclick="searchOrder()">Track</button>
+            </div>
+            <div class="card-body">
+            </div>
+        </div>
+        </div>
+
+            <div id="trackingResult">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+<script>
+    const socket = io();
+    let currentOrderId = null;
+
+    function searchOrder() {
+        const id = document.getElementById('trackInput').value;
+        if (!id) return;
+        
+        currentOrderId = id;
+        
+        fetch(`/api/track/${id}`)
+            .then(response => response.json())
+            .then(data => {
+                updateTrackingUI(data);
+            })
+            .catch(error => console.error('Error fetching order status:', error));
+    }
+
+    function updateTrackingUI(data) {
+        const resultDiv = document.getElementById('trackingResult');
+        resultDiv.innerHTML = '';
+
+        let htmlContent = '';
+        
+        if (data.status === 'READY') {
+            htmlContent = `
+                <div class="card shadow-sm mb-4 border-warning">
+                    <div class="card-body">
+                        <h5>${data.packageName || 'Package'}</h5>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <span>Status:</span>
+                            <span class="badge bg-warning">Ready for Dispatch</span>
+                        </div>
+                        <p class="text-muted small mt-2">Your order is prepared and waiting to be dispatched.</p>
+                    </div>
+                </div>`;
+        } else if (data.status === 'IN_TRANSIT' || data.status === 'DISPATCHED') {
+            htmlContent = `
+                <div class="card shadow-sm mb-4 border-info">
+                    <div class="card-body">
+                        <h5>${data.packageName || 'Package'}</h5>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <span>Status:</span>
+                            <span class="badge bg-info">${data.status}</span>
+                        </div>
+                        ${data.driverID ? `
+                        <div class="d-flex justify-content-between">
+                            <span>Driver ID:</span>
+                            <span class="badge bg-secondary">${data.driverName}</span>
+                        </div>` : ''}
+                        
+                        ${data.progress !== undefined ? `
+                        <div class="mt-3">
+                            <label class="small text-muted">Delivery Progress (Stop ${data.stopNumber} of ${data.totalStops})</label>
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: ${data.progress}%" aria-valuenow="${data.progress}" aria-valuemin="0" aria-valuemax="100">${data.progress}%</div>
+                            </div>
+                            <small class="text-muted">${data.progress}% of the way to you based on previous deliveries.</small>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>`;
+        } else if (data.status === 'DELIVERED') {
+            htmlContent = `
+                <div class="card shadow-sm mb-4 border-success">
+                    <div class="card-body">
+                        <h5>${data.packageName || 'Package'}</h5>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <span>Status:</span>
+                            <span class="badge bg-success">Delivered</span>
+                        </div>
+                        <p class="text-muted small mt-2">Your package has been delivered.</p>
+                    </div>
+                </div>`;
+        } else {
+             htmlContent = `
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <h5>Order Status: ${data.status}</h5>
+                        <p>Order ID: ${data.orderID}</p>
+                    </div>
+                </div>`;
+        }
+        
+        resultDiv.innerHTML = htmlContent;
+    }
+
+    socket.on('status_update', function(msg) {
+        if (currentOrderId && (msg.orderID == currentOrderId)) {
+
+            updateTrackingUI(msg);
+        }
+    });
+
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+    <head>
+        <title>SwiftTrack Order Portal</title>
+        <style>
+            body {
+                font-family: sans-serif;
+                max-width: 600px;
+                margin: 50px auto;
+                line-height: 1.6;
+            }
+            .card {
+                border: 1px solid #ccc;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 2px 2px 10px #eee;
+            }
+            input {
+                padding: 10px;
+                width: 70%;
+            }
+            button {
+                padding: 10px 20px;
+                background: #28a745;
+                color: white;
+                border: none;
+                cursor: pointer;
+            }
+            #log {
+                background: #333;
+                color: #0f0;
+                padding: 15px;
+                margin-top: 20px;
+                border-radius: 5px;
+                min-height: 100px;
+                overflow-y: auto;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>SwiftTrack CMS</h1>
+            <p>Enter User ID to simulate a purchase:</p>
+            <form id="orderForm">
+                <input
+                    type="text"
+                    name="user_id"
+                    placeholder="User ID (try 123)"
+                    required />
+                <button type="submit">Place Order</button>
+            </form>
+
+            <h3>System Logs (Live)</h3>
+            <div id="log">Waiting for order...</div>
+        </div>
+
+        <script>
+            document.getElementById("orderForm").onsubmit = async (e) => {
+                e.preventDefault();
+                const log = document.getElementById("log");
+                const formData = new FormData(e.target);
+
+                log.innerHTML = "";
+
+                log.innerHTML += `Sending request for User ${formData.get("user_id")}...`;
+
+                const res = await fetch("/submit-order", {
+                    method: "POST",
+                    body: formData,
+                });
+                const data = await res.json();
+
+                log.innerHTML += `<br> Server Response: ${JSON.stringify(data)}`;
+            };
+        </script>
+    </body>
+</html>

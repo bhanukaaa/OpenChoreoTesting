@@ -1,0 +1,166 @@
+{% extends "layout.html" %} {% block content %}
+<div class="container-fluid">
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-4">Place New Order</h5>
+            <form action="/place_order" method="POST">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Package Name</label>
+                            <input type="text" name="package_name" class="form-control" placeholder="e.g., Electronics Kit" required />
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Package Weight (kg)</label>
+                                <input type="number" step="0.1" name="package_weight" class="form-control" placeholder="1.5" required />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Package Type</label>
+                                <select name="package_type" class="form-control" required>
+                                    <option value="Standard">Standard</option>
+                                    <option value="Fragile">Fragile</option>
+                                    <option value="Perishable">Perishable</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Receiver Name</label>
+                            <input type="text" name="receiver_name" class="form-control" placeholder="John Doe" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Delivery Address</label>
+                            <textarea name="deliveryAddress" class="form-control" rows="2" placeholder="Street, City, Postal Code" required></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-success px-5">
+                        Submit Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title">Your Orders</h5>
+          </div>
+          <div
+            class="table-responsive"
+            style="max-height: 500px; overflow-y: auto"
+          >
+            <table class="table table-hover mt-3 align-middle mb-0">
+              <thead style="background-color: #1e293b !important; color: #93c5fd">
+                <tr>
+                  <th class="py-3 px-4 fw-semibold text-center" style="font-size: 1rem">
+                    Order ID
+                  </th>
+                  <th class="py-3 px-4 fw-semibold text-center" style="font-size: 1rem">
+                    Package Name
+                  </th>
+                  <th class="py-3 px-4 fw-semibold text-center" style="font-size: 1rem">
+                    Receiver Name
+                  </th>
+                  <th class="py-3 fw-semibold text-center" style="font-size: 1rem">
+                    Delivery Address
+                  </th>
+                  <th class="py-3 text-center px-4 fw-semibold" style="font-size: 1rem">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for order in orders %}
+                <tr>
+                  <td class="text-center">
+                    <span class="text-secondary">{{ order.orderID }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="text-secondary">{{ order.packageName }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="text-secondary">{{ order.receiverName }}</span>
+                  </td>
+                  <td class="text-center">
+                    <span class="text-secondary">{{ order.deliveryAddress }}</span>
+                  </td>
+                  <td class="text-end px-4" id="status-{{ order.orderID }}">
+                    {% if order.status == 'READY' %}
+                    <span class="badge bg-success">Ready</span>
+                    {% elif order.status == 'DISPATCHED' %}
+                    <span class="badge bg-success">Dispatched</span>
+                    {% elif order.status == 'DELIVERED' %}
+                    <span class="badge bg-success">Delivered</span>
+                    {% elif order.status == 'IN_TRANSIT' %}
+                    <span class="badge bg-primary">In Transit</span>
+                    {% elif order.status == 'FAILED' %}
+                    <span class="badge bg-danger">Failed</span>
+                    {% else %}
+                    <span class="badge bg-warning text-dark"
+                      >Processing...</span
+                    >
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+<script>
+  // Connect to the WebSocket server
+  const socket = io();
+
+  // Listen for the 'status_update' event we defined in Python
+  socket.on("status_update", function (data) {
+    console.log("Received status update:", data);
+
+    let statusCell = document.getElementById(`status-${data.orderID}`);
+
+    if (statusCell) {
+      updateStatusCell(statusCell, data.status);
+    } else {
+      // If the order isn't in the list (e.g., just placed), refresh the table
+      refreshOrders();
+    }
+  });
+
+  function updateStatusCell(cell, status) {
+    const statusMap = {
+      'READY': '<span class="badge bg-success">Ready</span>',
+      'DISPATCHED': '<span class="badge bg-primary">Dispatched</span>',
+      'DELIVERED': '<span class="badge bg-dark">Delivered</span>',
+      'IN_TRANSIT': '<span class="badge bg-info">In Transit</span>',
+      'FAILED': '<span class="badge bg-danger">Failed</span>'
+    };
+
+    cell.innerHTML = statusMap[status] || '<span class="badge bg-warning text-dark">Processing...</span>';
+  }
+
+  function refreshOrders() {
+    fetch(window.location.href)
+      .then((response) => response.text())
+      .then((html) => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const newTableBody = doc.querySelector("tbody");
+        if (newTableBody) {
+            document.querySelector("tbody").innerHTML = newTableBody.innerHTML;
+        }
+      });
+  }
+</script>
+{% endblock %}

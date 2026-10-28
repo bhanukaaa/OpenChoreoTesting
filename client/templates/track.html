@@ -1,0 +1,406 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<style>
+  /* ── TRACK PAGE SPECIFIC ────────────────────────────── */
+  .page-heading {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 1.6rem;
+    letter-spacing: 0.5px;
+    color: var(--navy);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .page-subheading {
+    font-size: 0.84rem;
+    color: var(--grey);
+    font-weight: 500;
+    margin-bottom: 32px;
+  }
+
+  /* ── SEARCH BAR ─────────────────────────────────────── */
+  .track-search-wrap {
+    background: #fff;
+    border-radius: 10px;
+    padding: 24px 28px;
+    box-shadow: 0 4px 20px rgba(13,27,42,0.07);
+    margin-bottom: 28px;
+  }
+
+  .track-search-label {
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--navy-mid);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .track-input-group {
+    display: flex;
+    gap: 10px;
+  }
+
+  .track-input {
+    flex: 1;
+    font-family: 'Barlow', sans-serif;
+    font-size: 0.95rem;
+    border: 1.5px solid #dde3ea;
+    border-radius: 6px;
+    padding: 10px 16px;
+    color: var(--navy);
+    background: #fafbfc;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .track-input:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(245,91,0,0.12);
+    outline: none;
+    background: #fff;
+  }
+
+  .track-input::placeholder { color: #b0bcc8; }
+
+  .btn-track-search {
+    font-family: 'Barlow', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 26px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+
+  .btn-track-search:hover {
+    background: var(--orange-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(245,91,0,0.35);
+  }
+
+  .btn-track-search:active { transform: translateY(0); }
+
+  /* ── RESULT CARDS ───────────────────────────────────── */
+  #trackingResult { animation: fadeIn 0.3s ease both; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(13,27,42,0.08);
+    overflow: hidden;
+  }
+
+  .result-card-accent {
+    height: 4px;
+    width: 100%;
+  }
+
+  .result-card-accent.warning { background: var(--orange); }
+  .result-card-accent.info    { background: #38bdf8; }
+  .result-card-accent.success { background: #22c55e; }
+  .result-card-accent.default { background: var(--grey); }
+
+  .result-card-body { padding: 28px; }
+
+  .result-pkg-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: var(--navy);
+    letter-spacing: 0.3px;
+    margin-bottom: 16px;
+  }
+
+  .result-divider {
+    height: 1px;
+    background: #edf0f3;
+    margin: 14px 0;
+  }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 0.88rem;
+  }
+
+  .result-row:last-child { margin-bottom: 0; }
+
+  .result-row .result-key {
+    color: var(--grey);
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  .result-note {
+    font-size: 0.83rem;
+    color: var(--grey);
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #edf0f3;
+    font-style: italic;
+  }
+
+  /* ── STATUS BADGES ──────────────────────────────────── */
+  .st-badge {
+    display: inline-block;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+
+  .st-badge-ready      { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+  .st-badge-transit    { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+  .st-badge-dispatched { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .st-badge-delivered  { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+  .st-badge-default    { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+  /* ── PROGRESS BAR ───────────────────────────────────── */
+  .progress-label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--grey);
+    margin-bottom: 8px;
+  }
+
+  .custom-progress {
+    height: 8px;
+    background: #edf0f3;
+    border-radius: 99px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+
+  .custom-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--orange), var(--orange-light));
+    border-radius: 99px;
+    transition: width 0.6s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .custom-progress-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    animation: shimmer 1.6s infinite;
+  }
+
+  @keyframes shimmer {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(100%); }
+  }
+
+  .progress-note {
+    font-size: 0.78rem;
+    color: var(--grey);
+  }
+
+  /* ── EMPTY / PLACEHOLDER STATE ──────────────────────── */
+  .track-placeholder {
+    text-align: center;
+    padding: 56px 24px;
+    color: var(--grey);
+  }
+
+  .track-placeholder-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px; height: 64px;
+    background: #edf0f3;
+    border-radius: 50%;
+    margin-bottom: 16px;
+  }
+
+  .track-placeholder-icon svg { fill: var(--grey); }
+
+  .track-placeholder p {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin: 0;
+  }
+</style>
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+
+      <div class="page-heading">Track a Package</div>
+      <p class="page-subheading">Enter your Order ID to get live delivery updates</p>
+
+      <!-- Search -->
+      <div class="track-search-wrap">
+        <label class="track-search-label">Order ID</label>
+        <div class="track-input-group">
+          <input
+            type="text"
+            id="trackInput"
+            class="track-input"
+            placeholder="e.g. 550e8400-e29b-41d4-a716…"
+          />
+          <button class="btn-track-search" onclick="searchOrder()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
+            Track
+          </button>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div id="trackingResult">
+        <div class="track-placeholder">
+          <div class="track-placeholder-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zm-.5 1.5 1.96 2.5H17V9.5h2.5zM6 18c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2.22-3c-.55-.61-1.33-1-2.22-1s-1.67.39-2.22 1H3V6h12v9H8.22zm9.78 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg>
+          </div>
+          <p>Enter an Order ID above to track your package</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+<script>
+  const socket = io();
+  let currentOrderId = null;
+
+  function searchOrder() {
+    const id = document.getElementById('trackInput').value.trim();
+    if (!id) return;
+    currentOrderId = id;
+
+    fetch(`/api/track/${id}`)
+      .then(r => r.json())
+      .then(data => updateTrackingUI(data))
+      .catch(err => console.error('Error fetching order status:', err));
+  }
+
+  // Allow Enter key to trigger search
+  document.getElementById('trackInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchOrder();
+  });
+
+  function updateTrackingUI(data) {
+    const resultDiv = document.getElementById('trackingResult');
+    resultDiv.style.animation = 'none';
+    resultDiv.offsetHeight; // reflow
+    resultDiv.style.animation = '';
+
+    let html = '';
+
+    if (data.status === 'READY') {
+      html = `
+        <div class="result-card">
+          <div class="result-card-accent warning"></div>
+          <div class="result-card-body">
+            <div class="result-pkg-name">${data.packageName || 'Package'}</div>
+            <div class="result-row">
+              <span class="result-key">Status</span>
+              <span class="st-badge st-badge-ready">Ready for Dispatch</span>
+            </div>
+            <p class="result-note">Your order is prepared and waiting to be dispatched.</p>
+          </div>
+        </div>`;
+
+    } else if (data.status === 'IN_TRANSIT' || data.status === 'DISPATCHED') {
+      const progressBlock = data.progress !== undefined ? `
+        <div class="result-divider"></div>
+        <div class="progress-label">Delivery Progress — Stop ${data.stopNumber} of ${data.totalStops}</div>
+        <div class="custom-progress">
+          <div class="custom-progress-bar" style="width:${data.progress}%"></div>
+        </div>
+        <p class="progress-note">${data.progress}% of the way to you based on previous deliveries.</p>
+      ` : '';
+
+      const driverBlock = data.driverID ? `
+        <div class="result-row">
+          <span class="result-key">Driver</span>
+          <span class="st-badge st-badge-default">${data.driverName}</span>
+        </div>` : '';
+
+      html = `
+        <div class="result-card">
+          <div class="result-card-accent info"></div>
+          <div class="result-card-body">
+            <div class="result-pkg-name">${data.packageName || 'Package'}</div>
+            <div class="result-row">
+              <span class="result-key">Status</span>
+              <span class="st-badge st-badge-${data.status === 'IN_TRANSIT' ? 'transit' : 'dispatched'}">${data.status === 'IN_TRANSIT' ? 'In Transit' : 'Dispatched'}</span>
+            </div>
+            ${driverBlock}
+            ${progressBlock}
+          </div>
+        </div>`;
+
+    } else if (data.status === 'DELIVERED') {
+      html = `
+        <div class="result-card">
+          <div class="result-card-accent success"></div>
+          <div class="result-card-body">
+            <div class="result-pkg-name">${data.packageName || 'Package'}</div>
+            <div class="result-row">
+              <span class="result-key">Status</span>
+              <span class="st-badge st-badge-delivered">Delivered</span>
+            </div>
+            <p class="result-note">Your package has been successfully delivered.</p>
+          </div>
+        </div>`;
+
+    } else {
+      html = `
+        <div class="result-card">
+          <div class="result-card-accent default"></div>
+          <div class="result-card-body">
+            <div class="result-pkg-name">${data.packageName || 'Order'}</div>
+            <div class="result-row">
+              <span class="result-key">Status</span>
+              <span class="st-badge st-badge-default">${data.status}</span>
+            </div>
+            <div class="result-row">
+              <span class="result-key">Order ID</span>
+              <span style="font-size:0.83rem; color:var(--grey);">${data.orderID}</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    resultDiv.innerHTML = html;
+  }
+
+  socket.on('status_update', function (msg) {
+    if (currentOrderId && msg.orderID == currentOrderId) {
+      updateTrackingUI(msg);
+    }
+  });
+</script>
+
+{% endblock %}

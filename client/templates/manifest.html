@@ -1,0 +1,373 @@
+{% extends "layout.html" %} {% block content %}
+
+<style>
+  /* ── MANIFEST PAGE SPECIFIC ────────────────────────── */
+  .page-heading {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 1.6rem;
+    letter-spacing: 0.5px;
+    color: var(--navy);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .page-subheading {
+    font-size: 0.84rem;
+    color: var(--grey);
+    font-weight: 500;
+    margin-bottom: 28px;
+  }
+
+  /* ── LOADING STATE ──────────────────────────────────── */
+  .loading-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(13,27,42,0.08);
+    padding: 48px 32px;
+    text-align: center;
+  }
+
+  .loading-spinner-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px; height: 56px;
+    background: rgba(245,91,0,0.1);
+    border-radius: 50%;
+    margin-bottom: 16px;
+  }
+
+  .spinner-border { color: var(--orange) !important; }
+
+  .loading-card p {
+    font-size: 0.92rem;
+    color: var(--navy-mid);
+    font-weight: 500;
+    margin: 0;
+  }
+
+  /* ── START DELIVERY BUTTON ──────────────────────────── */
+  .btn-start-delivery {
+    font-family: 'Barlow', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn-start-delivery::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    display: inline-block;
+  }
+
+  .btn-start-delivery:hover {
+    background: var(--orange-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(245,91,0,0.35);
+  }
+
+  .btn-start-delivery:disabled {
+    background: var(--grey);
+    transform: none;
+    box-shadow: none;
+    cursor: not-allowed;
+    opacity: 0.75;
+  }
+
+  /* ── TABLE CARD ─────────────────────────────────────── */
+  .manifest-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(13,27,42,0.08), 0 1px 4px rgba(13,27,42,0.05);
+    overflow: hidden;
+  }
+
+  .manifest-card-header {
+    background: var(--navy);
+    padding: 16px 28px;
+    position: relative;
+  }
+
+  .manifest-card-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--orange);
+  }
+
+  .manifest-card-header span {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--grey);
+  }
+
+  /* ── TABLE ──────────────────────────────────────────── */
+  .manifest-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .manifest-table thead tr { background: var(--navy-soft, #1E3248); }
+
+  .manifest-table thead th {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--grey);
+    padding: 12px 20px;
+    text-align: center;
+    border: none;
+    white-space: nowrap;
+  }
+
+  .manifest-table tbody tr {
+    border-bottom: 1px solid #edf0f3;
+    transition: background 0.15s;
+  }
+
+  .manifest-table tbody tr:hover { background: #f8f9fb; }
+  .manifest-table tbody tr:last-child { border-bottom: none; }
+
+  .manifest-table tbody td {
+    font-size: 0.9rem;
+    color: var(--navy);
+    padding: 14px 20px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  /* Sequence number */
+  .seq-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px; height: 28px;
+    background: var(--navy);
+    color: var(--orange);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+  }
+
+  /* ── STATUS BADGES ──────────────────────────────────── */
+  .st-badge {
+    display: inline-block;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+
+  .st-badge-ready      { background: #edfbf2; color: #15803d; border: 1px solid #bbf7d0; }
+  .st-badge-dispatched { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .st-badge-transit    { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+  .st-badge-delivered  { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+  .st-badge-failed     { background: #fff2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .st-badge-secondary  { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+  /* ── MARK DELIVERED BTN ─────────────────────────────── */
+  .btn-mark-delivered {
+    font-family: 'Barlow', sans-serif;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    background: transparent;
+    color: #15803d;
+    border: 1.5px solid #bbf7d0;
+    border-radius: 5px;
+    padding: 5px 13px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-mark-delivered:hover {
+    background: #edfbf2;
+    border-color: #22c55e;
+  }
+
+  .btn-mark-delivered:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* ── EMPTY STATE ────────────────────────────────────── */
+  .empty-manifest {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--grey);
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+</style>
+
+<div class="container">
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <div class="page-heading">Delivery Manifest</div>
+      <p class="page-subheading mb-0">Optimised delivery sequence for today's run</p>
+    </div>
+
+    {% if not is_loading %}
+    <button
+      id="startDeliveryBtn"
+      class="btn-start-delivery"
+      onclick="startDelivery()">
+      Start Delivery
+    </button>
+    {% endif %}
+  </div>
+
+  {% if is_loading %}
+  <div class="loading-card">
+    <div class="loading-spinner-wrap">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+    <p>Generating manifest… Please wait.</p>
+    <script>setTimeout(() => window.location.reload(), 3000);</script>
+  </div>
+
+  {% else %}
+
+  <div class="manifest-card">
+    <div class="manifest-card-header">
+      <span>Route Sequence</span>
+    </div>
+    <table class="manifest-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Package</th>
+          <th>Address</th>
+          <th>Receiver</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in orders %}
+        <tr>
+          <td><span class="seq-badge">{{ loop.index }}</span></td>
+          <td>{{ order.packageName }}</td>
+          <td style="text-align:left; max-width:200px;">{{ order.deliveryAddress }}</td>
+          <td>{{ order.receiverName }}</td>
+          <td>
+            <span class="st-badge st-badge-secondary" id="status-{{ order.orderID }}">{{ order.status }}</span>
+          </td>
+          <td>
+            <button
+              class="btn-mark-delivered mark-delivered-btn"
+              id="btn-{{ order.orderID }}"
+              onclick="markAsDelivered('{{ order.orderID }}')"
+              {% if order.status == "DELIVERED" %}disabled{% endif %}>
+              Mark Delivered
+            </button>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-manifest">No manifest available.</div>
+            <script>setTimeout(() => window.location.reload(), 5000);</script>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+  function startDelivery() {
+    if (confirm("Start delivery? All packages will be marked as IN-TRANSIT.")) {
+      fetch("/start_delivery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            const btn = document.getElementById("startDeliveryBtn");
+            btn.textContent = "In Transit";
+            btn.disabled = true;
+
+            document.querySelectorAll('[id^="status-"]').forEach(el => {
+              el.textContent = "IN_TRANSIT";
+              el.className = "st-badge st-badge-transit";
+            });
+          } else {
+            alert("Error: " + data.message);
+          }
+        })
+        .catch(err => console.error("Error:", err));
+    }
+  }
+
+  function markAsDelivered(orderID) {
+    if (confirm("Mark this order as delivered?")) {
+      fetch("/mark_delivered", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderID }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            const statusEl = document.getElementById("status-" + orderID);
+            statusEl.textContent = "DELIVERED";
+            statusEl.className = "st-badge st-badge-delivered";
+
+            document.getElementById("btn-" + orderID).disabled = true;
+
+            const allDone = Array.from(
+              document.querySelectorAll('[id^="status-"]')
+            ).every(el => el.textContent === "DELIVERED");
+
+            if (allDone) {
+              const startBtn = document.getElementById("startDeliveryBtn");
+              if (startBtn) {
+                startBtn.textContent = "Complete";
+                startBtn.style.background = "#22c55e";
+              }
+            }
+          } else {
+            alert("Error: " + data.message);
+          }
+        })
+        .catch(err => console.error("Error:", err));
+    }
+  }
+</script>
+
+{% endblock %}

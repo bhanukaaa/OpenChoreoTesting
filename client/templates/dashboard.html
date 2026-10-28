@@ -1,0 +1,353 @@
+{% extends "layout.html" %} {% block content %}
+
+<style>
+  /* ── DASHBOARD PAGE SPECIFIC ───────────────────────── */
+  .section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--navy);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+
+  /* ── FORM CARD ──────────────────────────────────────── */
+  .dash-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(13,27,42,0.08), 0 1px 4px rgba(13,27,42,0.05);
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+
+  .dash-card-header {
+    background: var(--navy);
+    padding: 18px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dash-card-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--orange);
+  }
+
+  .dash-card-header .section-title { color: #fff; margin: 0; }
+
+  .dash-card-body { padding: 28px; }
+
+  /* ── FORM CONTROLS ──────────────────────────────────── */
+  .form-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--navy-mid, #162535);
+    margin-bottom: 6px;
+  }
+
+  .form-control,
+  .form-select {
+    font-family: 'Barlow', sans-serif;
+    font-size: 0.95rem;
+    border: 1.5px solid #dde3ea;
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: var(--navy);
+    background: #fafbfc;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(245,91,0,0.12);
+    background: #fff;
+    outline: none;
+  }
+
+  .form-control::placeholder { color: #b0bcc8; }
+
+  textarea.form-control { resize: vertical; }
+
+  /* ── SUBMIT BUTTON ──────────────────────────────────── */
+  .btn-submit-order {
+    font-family: 'Barlow', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 11px 36px;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-submit-order::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+
+  .btn-submit-order:hover {
+    background: var(--orange-light);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(245,91,0,0.35);
+  }
+
+  .btn-submit-order:hover::after { transform: translateX(100%); }
+  .btn-submit-order:active { transform: translateY(0); }
+
+  /* ── TABLE ──────────────────────────────────────────── */
+  .orders-table-wrapper {
+    overflow-x: auto;
+    max-height: 520px;
+    overflow-y: auto;
+  }
+
+  .orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+  }
+
+  .orders-table thead tr {
+    background: var(--navy);
+  }
+
+  .orders-table thead th {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--grey, #8A9BB0);
+    padding: 14px 20px;
+    text-align: center;
+    border: none;
+    white-space: nowrap;
+  }
+
+  .orders-table thead th:first-child { text-align: left; }
+
+  .orders-table tbody tr {
+    border-bottom: 1px solid #edf0f3;
+    transition: background 0.15s;
+  }
+
+  .orders-table tbody tr:hover { background: #f8f9fb; }
+  .orders-table tbody tr:last-child { border-bottom: none; }
+
+  .orders-table tbody td {
+    font-size: 0.9rem;
+    color: var(--navy);
+    padding: 14px 20px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .orders-table tbody td:first-child {
+    text-align: left;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.88rem;
+    letter-spacing: 0.5px;
+    color: var(--orange);
+  }
+
+  .orders-table tbody td .order-id-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── STATUS BADGES ──────────────────────────────────── */
+  .st-badge {
+    display: inline-block;
+    font-family: 'Barlow', sans-serif;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+
+  .st-badge-ready      { background: #edfbf2; color: #15803d; border: 1px solid #bbf7d0; }
+  .st-badge-dispatched { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .st-badge-transit    { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+  .st-badge-delivered  { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
+  .st-badge-failed     { background: #fff2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .st-badge-processing { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+
+  /* ── EMPTY STATE ────────────────────────────────────── */
+  .empty-orders {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--grey);
+  }
+
+  .empty-orders svg { fill: #dde3ea; margin-bottom: 14px; }
+
+  .empty-orders p {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin: 0;
+  }
+</style>
+
+<div class="container-fluid">
+
+  <!-- Place New Order Card -->
+  <div class="dash-card">
+    <div class="dash-card-header">
+      <span class="section-title">Place New Order</span>
+    </div>
+    <div class="dash-card-body">
+      <form action="/place_order" method="POST">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label">Package Name</label>
+              <input type="text" name="package_name" class="form-control" placeholder="e.g., Electronics Kit" required />
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Weight (kg)</label>
+                <input type="number" step="0.1" name="package_weight" class="form-control" placeholder="1.5" required />
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Package Type</label>
+                <select name="package_type" class="form-control form-select" required>
+                  <option value="Standard">Standard</option>
+                  <option value="Fragile">Fragile</option>
+                  <option value="Perishable">Perishable</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label class="form-label">Receiver Name</label>
+              <input type="text" name="receiver_name" class="form-control" placeholder="John Doe" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Delivery Address</label>
+              <textarea name="deliveryAddress" class="form-control" rows="2" placeholder="Street, City, Postal Code" required></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-end pt-2">
+          <button type="submit" class="btn-submit-order">Submit Order</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Orders Table Card -->
+  <div class="dash-card">
+    <div class="dash-card-header">
+      <span class="section-title">Your Orders</span>
+    </div>
+    <div class="orders-table-wrapper">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Package Name</th>
+            <th>Receiver</th>
+            <th>Delivery Address</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+          <tr>
+            <td>
+              <span class="order-id-wrap">
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="var(--orange)" style="flex-shrink:0"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
+                {{ order.orderID }}
+              </span>
+            </td>
+            <td>{{ order.packageName }}</td>
+            <td>{{ order.receiverName }}</td>
+            <td>{{ order.deliveryAddress }}</td>
+            <td id="status-{{ order.orderID }}">
+              {% if order.status == 'READY' %}
+                <span class="st-badge st-badge-ready">Ready</span>
+              {% elif order.status == 'DISPATCHED' %}
+                <span class="st-badge st-badge-dispatched">Dispatched</span>
+              {% elif order.status == 'DELIVERED' %}
+                <span class="st-badge st-badge-delivered">Delivered</span>
+              {% elif order.status == 'IN_TRANSIT' %}
+                <span class="st-badge st-badge-transit">In Transit</span>
+              {% elif order.status == 'FAILED' %}
+                <span class="st-badge st-badge-failed">Failed</span>
+              {% else %}
+                <span class="st-badge st-badge-processing">Processing…</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5">
+              <div class="empty-orders">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
+                <p>No orders placed yet.</p>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  socket.on("status_update", function (data) {
+    const statusCell = document.getElementById(`status-${data.orderID}`);
+    if (statusCell) {
+      updateStatusCell(statusCell, data.status);
+    } else {
+      refreshOrders();
+    }
+  });
+
+  function updateStatusCell(cell, status) {
+    const map = {
+      'READY':      '<span class="st-badge st-badge-ready">Ready</span>',
+      'DISPATCHED': '<span class="st-badge st-badge-dispatched">Dispatched</span>',
+      'DELIVERED':  '<span class="st-badge st-badge-delivered">Delivered</span>',
+      'IN_TRANSIT': '<span class="st-badge st-badge-transit">In Transit</span>',
+      'FAILED':     '<span class="st-badge st-badge-failed">Failed</span>',
+    };
+    cell.innerHTML = map[status] || '<span class="st-badge st-badge-processing">Processing…</span>';
+  }
+
+  function refreshOrders() {
+    fetch(window.location.href)
+      .then(r => r.text())
+      .then(html => {
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const newTbody = doc.querySelector("tbody");
+        if (newTbody) document.querySelector("tbody").innerHTML = newTbody.innerHTML;
+      });
+  }
+</script>
+
+{% endblock %}

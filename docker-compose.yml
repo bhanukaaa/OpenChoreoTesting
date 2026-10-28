@@ -1,0 +1,289 @@
+services:
+    postgres:
+        image: postgres:16-alpine
+        container_name: postgres
+        ports:
+            - "5432:5432"
+        environment:
+            - POSTGRES_USER=swiftuser
+            - POSTGRES_PASSWORD=swiftpassword
+            - POSTGRES_DB=swifttrack
+        volumes:
+            - swifttrack_pgdata:/var/lib/postgresql/data
+            - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U swiftuser -d swifttrack"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
+    rabbitmq:
+        image: rabbitmq:3-management
+        container_name: rabbitmq
+        ports:
+            - "5672:5672"
+            - "15672:15672"
+        healthcheck:
+            test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
+    api_gateway:
+        build:
+            context: .
+            dockerfile: services/api_gateway/Dockerfile
+        container_name: api_gateway
+        ports:
+            - "8080:8080"
+        environment:
+            - AUTH_SERVICE_URL=http://auth_service:8002
+            - ORDER_SERVICE_URL=http://order_service:8001
+            - CMS_SERVICE_URL=http://cms_system:8003
+            - WMS_SERVICE_URL=http://wms_system:8004
+            - ROS_SERVICE_URL=http://ros_system:8005
+            - DISPATCH_SERVICE_URL=http://dispatch_service:8006
+            - DELIVERY_SERVICE_URL=http://delivery_service:8007
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            - auth_service
+            - order_service
+
+    auth_service:
+        build:
+            context: .
+            dockerfile: services/auth_service/Dockerfile
+        container_name: auth_service
+        ports:
+            - "8002:8002"
+        environment:
+            - DB_HOST=postgres
+            - DB_PORT=5432
+            - DB_USER=swiftuser
+            - DB_PASSWORD=swiftpassword
+            - DB_NAME=swifttrack
+            - DB_SCHEMA=auth
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            postgres:
+                condition: service_healthy
+
+    order_service:
+        build:
+            context: .
+            dockerfile: services/order_service/Dockerfile
+        container_name: order_service
+        ports:
+            - "8001:8001"
+        environment:
+            - DB_HOST=postgres
+            - DB_PORT=5432
+            - DB_USER=swiftuser
+            - DB_PASSWORD=swiftpassword
+            - DB_NAME=swifttrack
+            - DB_SCHEMA=orders
+            - RABBITMQ_HOST=rabbitmq
+            - AUTH_SERVICE_URL=http://auth_service:8002/verify
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            postgres:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+
+    dispatch_service:
+        build:
+            context: .
+            dockerfile: services/dispatch_service/Dockerfile
+        container_name: dispatch_service
+        ports:
+            - "8006:8006"
+        environment:
+            - DB_HOST=postgres
+            - DB_PORT=5432
+            - DB_USER=swiftuser
+            - DB_PASSWORD=swiftpassword
+            - DB_NAME=swifttrack
+            - DB_SCHEMA=dispatch
+            - RABBITMQ_HOST=rabbitmq
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            postgres:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+
+    delivery_service:
+        build:
+            context: .
+            dockerfile: services/delivery_service/Dockerfile
+        container_name: delivery_service
+        ports:
+            - "8007:8007"
+        environment:
+            - DB_HOST=postgres
+            - DB_PORT=5432
+            - DB_USER=swiftuser
+            - DB_PASSWORD=swiftpassword
+            - DB_NAME=swifttrack
+            - DB_SCHEMA=delivery
+            - RABBITMQ_HOST=rabbitmq
+            - DISPATCH_SERVICE_URL=http://dispatch_service:8006
+            - ORDER_SERVICE_URL=http://order_service:8001
+            - AUTH_SERVICE_URL=http://auth_service:8002/verify
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            postgres:
+                condition: service_healthy
+            rabbitmq:
+                condition: service_healthy
+            dispatch_service:
+                condition: service_started
+
+    wms_adapter:
+        build:
+            context: .
+            dockerfile: esb/wms_adapter/Dockerfile
+        container_name: wms_adapter
+        environment:
+            - RABBITMQ_HOST=rabbitmq
+            - LEGACY_WMS_HOST=wms_system
+            - LEGACY_WMS_PORT=8004
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+            wms_system:
+                condition: service_started
+
+    cms_adapter:
+        build:
+            context: .
+            dockerfile: esb/cms_adapter/Dockerfile
+        container_name: cms_adapter
+        environment:
+            - RABBITMQ_HOST=rabbitmq
+            - RABBITMQ_EXCHANGE=swifttrack_events
+            - LEGACY_CMS_HOST=cms_system
+            - LEGACY_CMS_PORT=8003
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+            cms_system:
+                condition: service_started
+
+    ros_adapter:
+        build:
+            context: .
+            dockerfile: esb/ros_adapter/Dockerfile
+        container_name: ros_adapter
+        environment:
+            - RABBITMQ_HOST=rabbitmq
+            - RABBITMQ_EXCHANGE=swifttrack_events
+            - LEGACY_ROS_HOST=ros_system
+            - LEGACY_ROS_PORT=8005
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+            ros_system:
+                condition: service_started
+
+    cms_system:
+        build:
+            context: .
+            dockerfile: legacy/cms_system/Dockerfile
+        container_name: cms_system
+        ports:
+            - "8003:8003"
+        environment:
+            - DB_HOST=postgres
+            - DB_PORT=5432
+            - DB_USER=swiftuser
+            - DB_PASSWORD=swiftpassword
+            - DB_NAME=swifttrack
+            - DB_SCHEMA=legacy_cms
+            - PORT=8003
+            - HOST=0.0.0.0
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            postgres:
+                condition: service_healthy
+
+    wms_system:
+        build:
+            context: .
+            dockerfile: legacy/wms_system/Dockerfile
+        container_name: wms_system
+        ports:
+            - "8004:8004"
+        environment:
+            - DB_HOST=postgres
+            - DB_PORT=5432
+            - DB_USER=swiftuser
+            - DB_PASSWORD=swiftpassword
+            - DB_NAME=swifttrack
+            - DB_SCHEMA=legacy_wms
+            - PORT=8004
+            - HOST=0.0.0.0
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            postgres:
+                condition: service_healthy
+
+    ros_system:
+        build:
+            context: .
+            dockerfile: legacy/ros_system/Dockerfile
+        container_name: ros_system
+        ports:
+            - "8005:8005"
+        environment:
+            - DB_HOST=postgres
+            - DB_PORT=5432
+            - DB_USER=swiftuser
+            - DB_PASSWORD=swiftpassword
+            - DB_NAME=swifttrack
+            - DB_SCHEMA=legacy_ros
+            - PORT=8005
+            - HOST=0.0.0.0
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            postgres:
+                condition: service_healthy
+
+    client_portal:
+        build:
+            context: .
+            dockerfile: client/Dockerfile
+        container_name: client_portal
+        ports:
+            - "8000:8000"
+        environment:
+            - API_GATEWAY_URL=http://api_gateway:8080
+            - ORDER_SERVICE_URL=http://api_gateway:8080/orders
+            - RABBITMQ_HOST=rabbitmq
+            - PYTHONUNBUFFERED=1
+        depends_on:
+            - api_gateway
+            - order_service
+
+    seed_data:
+        build:
+            context: .
+            dockerfile: services/order_service/Dockerfile
+        profiles: ["seed"]
+        environment:
+            - RABBITMQ_HOST=rabbitmq
+        volumes:
+            - ./seed_data.py:/app/seed_data.py
+        command: ["python", "seed_data.py"]
+        depends_on:
+            rabbitmq:
+                condition: service_healthy
+            order_service:
+                condition: service_started
+
+volumes:
+    swifttrack_pgdata:
