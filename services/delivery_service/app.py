@@ -9,8 +9,6 @@ from utility.db_helper import get_db_connection
 app = Flask(__name__)
 
 # Config
-AUTH_SERVICE_URL = os.getenv(
-    'AUTH_SERVICE_URL', 'http://auth_service:8002/verify')
 DISPATCH_SERVICE_URL = os.getenv(
     'DISPATCH_SERVICE_URL', 'http://dispatch_service:8006')
 ORDER_SERVICE_URL = os.getenv(

@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 EXCHANGE_NAME = os.getenv('RABBITMQ_EXCHANGE', 'swifttrack_events')
 AUTH_SERVICE_URL = os.getenv(
-    'AUTH_SERVICE_URL', 'http://auth_service:8002/verify')
+    'AUTH_SERVICE_URL', 'http://auth_service:8002')
 
 # --- Database Setup ---
 
@@ -247,7 +247,7 @@ def place_order():
     token = request.headers.get('Authorization')
     if token:
         try:
-            auth_resp = requests.post(AUTH_SERVICE_URL, json={"token": token}, timeout=5)
+            auth_resp = requests.post(AUTH_SERVICE_URL + "/verify", json={"token": token}, timeout=5)
             if auth_resp.status_code != 200:
                 return jsonify({"error": "Unauthorized"}), 401
         except Exception as e:

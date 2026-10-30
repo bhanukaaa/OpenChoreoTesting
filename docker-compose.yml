@@ -83,7 +83,7 @@ services:
             - DB_NAME=swifttrack
             - DB_SCHEMA=orders
             - RABBITMQ_HOST=rabbitmq
-            - AUTH_SERVICE_URL=http://auth_service:8002/verify
+            - AUTH_SERVICE_URL=http://auth_service:8002
             - PYTHONUNBUFFERED=1
         depends_on:
             postgres:
@@ -130,7 +130,6 @@ services:
             - RABBITMQ_HOST=rabbitmq
             - DISPATCH_SERVICE_URL=http://dispatch_service:8006
             - ORDER_SERVICE_URL=http://order_service:8001
-            - AUTH_SERVICE_URL=http://auth_service:8002/verify
             - PYTHONUNBUFFERED=1
         depends_on:
             postgres:
